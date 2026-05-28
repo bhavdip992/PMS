@@ -6,7 +6,7 @@ esparkPM is a MERN-stack enterprise-grade Project Management System (PMS) tailor
 
 ## 📸 Dashboard Interface
 
-![esparkPM Dashboard Interface](./screenshots/dashboard.png)
+![esparkPM Dashboard Interface](https://raw.githubusercontent.com/bhavdip992/PMS/bd-dev/screenshots/dashboard.png)
 ---
 
 ## 🚀 Key Features
