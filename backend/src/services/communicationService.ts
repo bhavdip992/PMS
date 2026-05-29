@@ -26,6 +26,9 @@ class CommunicationService {
     if (query.task) {
       filter.task = query.task;
     }
+    if (query.subtask) {
+      filter.subtask = query.subtask;
+    }
     if (query.type) {
       filter.type = query.type;
     }

@@ -54,7 +54,7 @@ class GeminiService {
       throw new Error('Gemini API client not initialized. Key is missing.');
     }
 
-    const modelName = process.env.GEMINI_MODEL || 'gemini-1.5-flash';
+    const modelName = process.env.GEMINI_MODEL || 'gemini-2.5-flash';
     const model = client.getGenerativeModel({ model: modelName });
 
     const maxRetries = 3;

@@ -205,9 +205,7 @@ GET    /api/v1/audit-logs               (Super Admin / Admin)
 
 ---
 
-## Phase 2 — Role-Based Dashboards & Team Management
-
-> **Estimated subtasks: 18**
+## Phase 2 — Role-Based Dashboards & Team Management [COMPLETED]
 
 ### Dashboard Architecture
 
@@ -367,33 +365,33 @@ POST   /api/v1/attachments/:id/comments
 
 ---
 
-## Phase 6 — Real-Time Notification System
+## Phase 6 — Real-Time Notification System [COMPLETED]
 
 > **Estimated subtasks: 16**
 
 ### Socket.IO Architecture
 
-#### [MODIFY] `socket/socketService.ts`
-- Authenticate socket via HTTP-only cookie on connection
-- User joins room by `userId`
-- Admin joins room by `role`
-- Handle reconnection with `lastSeenAt` sync
+#### [MODIFY] `socket/socketService.ts` [x]
+- [x] Authenticate socket via HTTP-only cookie on connection
+- [x] User joins room by `userId`
+- [x] Admin joins room by `role`
+- [x] Handle reconnection with `lastSeenAt` sync
 
-#### [NEW] `models/notification.ts` (upgrade existing)
-Add: `groupKey`, `channel[]` (inApp/email/push), `readAt`, `actionUrl`, `metadata`
+#### [NEW] `models/notification.ts` (upgraded existing) [x]
+- [x] Add: `groupKey`, `channel[]` (inApp/email/push), `readAt`, `actionUrl`, `metadata`
 
-#### [NEW] `services/notificationService.ts`
-- `emit(userId, event, payload)` — Socket.IO emit
-- `sendEmail(userId, template, data)` — Nodemailer
-- `createNotification(data)` — persist + emit
+#### [NEW] `services/notificationService.ts` [x]
+- [x] `emit(userId, event, payload)` — Socket.IO emit
+- [x] `sendEmail(userId, template, data)` — Nodemailer
+- [x] `createNotification(data)` — persist + emit
 
-#### [NEW] `features/notifications/NotificationCenter.tsx`
-- Bell icon with unread badge
-- Grouped notification list
-- Read/unread toggle
-- Mark all read
+#### [NEW] `features/notifications/NotificationCenter.tsx` [x]
+- [x] Bell icon with unread badge
+- [x] Grouped notification list
+- [x] Read/unread toggle
+- [x] Mark all read
 
-#### Notification Events (Socket.IO)
+#### Notification Events (Socket.IO) [x]
 ```
 task:assigned, task:updated, task:commented,
 task:overdue, task:status_changed,
@@ -401,14 +399,14 @@ file:uploaded, sprint:updated,
 mention:created, communication:updated
 ```
 
-### API Routes — Phase 6
+### API Routes — Phase 6 [x]
 ```
-GET    /api/v1/notifications
-PATCH  /api/v1/notifications/:id/read
-PATCH  /api/v1/notifications/read-all
-DELETE /api/v1/notifications/:id
-GET    /api/v1/notifications/preferences
-PATCH  /api/v1/notifications/preferences
+GET    /api/v1/notifications               [x]
+PATCH  /api/v1/notifications/:id/read      [x]
+PATCH  /api/v1/notifications/read-all      [x]
+DELETE /api/v1/notifications/:id          [x]
+GET    /api/v1/notifications/preferences   [x]
+PATCH  /api/v1/notifications/preferences   [x]
 ```
 
 ---

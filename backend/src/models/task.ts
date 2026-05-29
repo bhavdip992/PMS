@@ -125,6 +125,40 @@ const taskSchema = new mongoose.Schema({
     qaStatus: { type: String, enum: ['Pending', 'Passed', 'Failed'], default: 'Pending' },
     qaFeedback: { type: String, default: '' }
   },
+  deploymentNotes: {
+    type: String,
+    default: ''
+  },
+  requirementNotes: {
+    type: String,
+    default: ''
+  },
+  richDescription: {
+    type: String,
+    default: ''
+  },
+  breadcrumb: {
+    type: String,
+    default: ''
+  },
+  hierarchy: {
+    parentTask: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Task',
+      default: null
+    }
+  },
+  qaChecklist: [{
+    item: {
+      type: String,
+      required: true,
+      trim: true
+    },
+    isCompleted: {
+      type: Boolean,
+      default: false
+    }
+  }],
   lastCommentedAt: {
     type: Date,
     index: true

@@ -103,7 +103,15 @@ export default function MyTasks() {
   const filtered = filterPriority === 'all' ? tasks : tasks.filter(t => t.priority === filterPriority);
 
   const grouped = STATUS_COLS.reduce((acc, col) => {
-    acc[col.key] = filtered.filter(t => t.status === col.key);
+    const colTasks = filtered.filter(t => t.status === col.key);
+    // Sort tasks by due date ascending (soonest due first, items without due date last)
+    const sortedColTasks = [...colTasks].sort((a, b) => {
+      if (!a.dueDate && !b.dueDate) return 0;
+      if (!a.dueDate) return 1;
+      if (!b.dueDate) return -1;
+      return new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime();
+    });
+    acc[col.key] = sortedColTasks;
     return acc;
   }, {});
 

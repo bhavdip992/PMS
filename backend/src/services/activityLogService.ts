@@ -5,6 +5,10 @@ class ActivityLogService {
     return await activityLogRepository.findByTaskId(taskId);
   }
 
+  async getActivitiesForSubtask(subtaskId) {
+    return await activityLogRepository.findBySubtaskId(subtaskId);
+  }
+
   async getActivitiesForProject(projectId, queryOptions = {}) {
     const limit = parseInt((queryOptions as any).limit, 10) || 50;
     return await activityLogRepository.findByProjectId(projectId, limit);

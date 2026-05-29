@@ -103,3 +103,28 @@ export const removeChecklistItem = async (req, res, next) => {
     next(error);
   }
 };
+
+export const getTaskDependencies = async (req, res, next) => {
+  try {
+    const dependencies = await taskService.getTaskDependencies(req.params.id);
+    res.status(200).json({
+      status: 'success',
+      data: { dependencies }
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const addTaskDependency = async (req, res, next) => {
+  try {
+    const { dependencyId } = req.body;
+    const task = await taskService.addTaskDependency(req.params.id, dependencyId);
+    res.status(200).json({
+      status: 'success',
+      data: { task }
+    });
+  } catch (error) {
+    next(error);
+  }
+};

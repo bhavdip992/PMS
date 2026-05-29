@@ -64,3 +64,34 @@ export const listTimeLogs = async (req, res, next) => {
     next(error);
   }
 };
+
+export const deleteTimeLog = async (req, res, next) => {
+  try {
+    await timeLogService.deleteTimeLog(req.params.id, req.user._id);
+    res.status(200).json({
+      status: 'success',
+      message: 'Time log deleted successfully'
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const getTaskTimeLogs = async (req, res, next) => {
+  try {
+    const { items, total, page, limit } = await timeLogService.listTimeLogs(
+      { task: req.params.id, all: true },
+      req.user._id
+    );
+    res.status(200).json({
+      status: 'success',
+      results: items.length,
+      total,
+      page,
+      limit,
+      data: { timeLogs: items }
+    });
+  } catch (error) {
+    next(error);
+  }
+};

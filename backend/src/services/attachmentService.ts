@@ -13,6 +13,10 @@ class AttachmentService {
     return await attachmentRepository.findByTask(taskId);
   }
 
+  async getSubtaskAttachments(subtaskId) {
+    return await attachmentRepository.findBySubtask(subtaskId);
+  }
+
   async getProjectAttachments(projectId) {
     return await attachmentRepository.findByProject(projectId);
   }

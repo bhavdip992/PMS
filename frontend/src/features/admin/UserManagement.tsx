@@ -209,7 +209,7 @@ export default function UserManagement() {
                     <td className="px-4 py-3">
                       <div className="flex items-center space-x-3">
                         <div className="w-8 h-8 rounded-full bg-violet-600/20 border border-violet-500/30 flex items-center justify-center text-violet-300 font-bold text-sm">
-                          {u.name?.charAt(0).toUpperCase()}
+                          {u.name?.charAt(0).toUpperCase()}{u.name?.split(" ")[1]?.charAt(0).toUpperCase()}
                         </div>
                         <div>
                           <p className="font-bold text-slate-200">{u.name}</p>
@@ -302,12 +302,12 @@ export default function UserManagement() {
         <Modal title={`Assign Task to ${taskUser.name}`} onClose={() => setTaskUser(null)}>
           <form onSubmit={handleCreateTask} className="space-y-4">
             {error && <p className="text-xs text-red-400 bg-red-950/30 border border-red-900/50 p-2 rounded-lg">{error}</p>}
-            
+
             <Field label="Task Title" type="text" required value={taskForm.title} onChange={v => setTaskForm({ ...taskForm, title: v })} placeholder="E.g., Review PR or setup database" />
-            
+
             <div>
               <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">Target Project</label>
-              <select 
+              <select
                 value={taskForm.project}
                 onChange={e => setTaskForm({ ...taskForm, project: e.target.value })}
                 className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-slate-100 outline-none focus:border-violet-500 transition-colors"
@@ -320,7 +320,7 @@ export default function UserManagement() {
 
             <div>
               <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">Description</label>
-              <textarea 
+              <textarea
                 value={taskForm.description}
                 onChange={e => setTaskForm({ ...taskForm, description: e.target.value })}
                 placeholder="Scope of work details..."
@@ -332,7 +332,7 @@ export default function UserManagement() {
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">Priority</label>
-                <select 
+                <select
                   value={taskForm.priority}
                   onChange={e => setTaskForm({ ...taskForm, priority: e.target.value })}
                   className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-slate-100 outline-none focus:border-violet-500 transition-colors"

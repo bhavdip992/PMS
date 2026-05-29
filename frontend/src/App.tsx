@@ -10,9 +10,11 @@ const ForgotPassword   = lazy(() => import('./features/auth/ForgotPassword.tsx')
 const ResetPassword    = lazy(() => import('./features/auth/ResetPassword.tsx'));
 const Dashboard        = lazy(() => import('./features/dashboard/Dashboard.tsx'));
 const Projects         = lazy(() => import('./features/projects/Projects.tsx'));
+const ProjectWorkspace = lazy(() => import('./features/projects/ProjectWorkspace.tsx'));
 const Tasks            = lazy(() => import('./features/tasks/Tasks.tsx'));
 const MyTasks          = lazy(() => import('./features/tasks/MyTasks.tsx'));
 const TaskDetailView   = lazy(() => import('./features/tasks/TaskDetailView.tsx'));
+const SubtaskDetailView = lazy(() => import('./features/tasks/SubtaskDetailView.tsx'));
 const Communications   = lazy(() => import('./features/communications/Communications.tsx'));
 const Vault            = lazy(() => import('./features/vault/Vault.tsx'));
 const Team             = lazy(() => import('./features/team/Team.tsx'));
@@ -20,7 +22,9 @@ const UserManagement   = lazy(() => import('./features/admin/UserManagement.tsx'
 const Calendar         = lazy(() => import('./features/calendar/Calendar.tsx'));
 const Workload         = lazy(() => import('./features/workload/Workload.tsx'));
 const Settings         = lazy(() => import('./features/settings/Settings.tsx'));
-const Inbox            = lazy(() => import('./features/inbox/Inbox.tsx'));
+const Inbox            = lazy(() => import('./features/notifications/NotificationCenter.tsx'));
+const Timesheet        = lazy(() => import('./features/timesheet/Timesheet.tsx'));
+const Subtasks         = lazy(() => import('./features/subtasks/Subtasks.tsx'));
 
 // Protected Route wrapper
 const ProtectedRoute: React.FC<{ children: React.ReactNode; roles?: string[] }> = ({ children, roles }) => {
@@ -79,9 +83,13 @@ export default function App() {
         }>
           <Route index element={<Dashboard />} />
           <Route path="projects" element={<Projects />} />
+          <Route path="projects/:projectId" element={<ProjectWorkspace />} />
           <Route path="tasks" element={<Tasks />} />
           <Route path="tasks/:taskId" element={<TaskDetailView />} />
+          <Route path="tasks/:taskId/subtasks/:subtaskId" element={<SubtaskDetailView />} />
+          <Route path="subtasks" element={<Subtasks />} />
           <Route path="my-tasks" element={<MyTasks />} />
+          <Route path="timesheet" element={<Timesheet />} />
           <Route path="inbox" element={<Inbox />} />
           <Route path="communications" element={<Communications />} />
           <Route path="vault" element={<Vault />} />

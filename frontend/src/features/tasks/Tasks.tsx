@@ -20,7 +20,11 @@ import {
   Lock,
   ChevronRight,
   MessageSquare,
-  X
+  X,
+  Search,
+  Filter,
+  FolderKanban,
+  UserCheck
 } from 'lucide-react';
 
 export default function Tasks() {
@@ -34,6 +38,13 @@ export default function Tasks() {
   const [loading, setLoading] = useState(true);
   const [isKanban, setIsKanban] = useState(true);
   const [sortBy, setSortBy] = useState('default');
+  
+  // Filters
+  const [searchQuery, setSearchQuery] = useState('');
+  const [projectFilter, setProjectFilter] = useState('');
+  const [priorityFilter, setPriorityFilter] = useState('');
+  const [assigneeFilter, setAssigneeFilter] = useState('');
+  const [statusFilter, setStatusFilter] = useState('');
   
   // Modal states
   const [createModalOpen, setCreateModalOpen] = useState(false);
@@ -50,6 +61,7 @@ export default function Tasks() {
   const [milestones, setMilestones] = useState([]);
   const [estimatedHours, setEstimatedHours] = useState('');
   const [dueDate, setDueDate] = useState('');
+  const [startDate, setStartDate] = useState('');
   const [assignees, setAssignees] = useState([]);
   const [dependencies, setDependencies] = useState([]);
 
@@ -70,6 +82,8 @@ export default function Tasks() {
   useEffect(() => {
     if (project) {
       fetchProjectMilestones(project);
+    } else {
+      setMilestones([]);
     }
   }, [project]);
 
@@ -77,7 +91,6 @@ export default function Tasks() {
     try {
       const res = await api.get(`/milestones?projectId=${projectId}`);
       setMilestones(res.data.data.milestones || []);
-      setMilestone('');
     } catch (err) {
       console.error('Failed to load project milestones', err);
     }
@@ -119,7 +132,8 @@ export default function Tasks() {
         project,
         milestone: milestone || null,
         estimatedHours: Number(estimatedHours) || 0,
-        dueDate,
+        dueDate: dueDate || undefined,
+        startDate: startDate || undefined,
         assignees,
         dependencies
       };
@@ -135,6 +149,7 @@ export default function Tasks() {
       setMilestone('');
       setEstimatedHours('');
       setDueDate('');
+      setStartDate('');
       setAssignees([]);
       setDependencies([]);
 
@@ -277,6 +292,23 @@ export default function Tasks() {
     return sorted;
   };
 
+  const filteredTasks = tasks.filter((t: any) => {
+    const matchesSearch = 
+      t.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (t.description && t.description.toLowerCase().includes(searchQuery.toLowerCase()));
+
+    const projId = t.project?._id || t.project;
+    const matchesProject = !projectFilter || projId === projectFilter;
+
+    const matchesPriority = !priorityFilter || t.priority === priorityFilter;
+
+    const matchesAssignee = !assigneeFilter || t.assignees?.some((a: any) => (a._id || a) === assigneeFilter);
+
+    const matchesStatus = !statusFilter || t.status === statusFilter;
+
+    return matchesSearch && matchesProject && matchesPriority && matchesAssignee && matchesStatus;
+  });
+
   const columns = ['Backlog', 'Todo', 'In Progress', 'In Review', 'Done'];
 
   if (loading) {
@@ -338,11 +370,81 @@ export default function Tasks() {
         </div>
       </div>
 
+      {/* Filter Toolbar */}
+      <div className="bg-slate-900/40 border border-slate-850 p-4 rounded-2xl space-y-3">
+        <div className="flex flex-col lg:flex-row gap-3">
+          
+          {/* Search */}
+          <div className="flex-1 relative">
+            <Search className="absolute left-3.5 top-2.5 text-slate-500" size={14} />
+            <input
+              type="text"
+              placeholder="Search tasks by title or description..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="w-full bg-slate-950/70 border border-slate-800 rounded-xl pl-9 pr-4 py-2 text-xs text-slate-200 outline-none focus:border-violet-500 transition-all placeholder-slate-600"
+            />
+          </div>
+
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+            {/* Project Filter */}
+            <select
+              value={projectFilter}
+              onChange={(e) => setProjectFilter(e.target.value)}
+              className="bg-slate-950/70 border border-slate-800 rounded-xl px-3 py-2 text-xs text-slate-350 outline-none focus:border-violet-500"
+            >
+              <option value="">All Projects</option>
+              {projects.map((p: any) => (
+                <option key={p._id} value={p._id}>{p.name}</option>
+              ))}
+            </select>
+
+            {/* Priority Filter */}
+            <select
+              value={priorityFilter}
+              onChange={(e) => setPriorityFilter(e.target.value)}
+              className="bg-slate-950/70 border border-slate-800 rounded-xl px-3 py-2 text-xs text-slate-350 outline-none focus:border-violet-500"
+            >
+              <option value="">All Priorities</option>
+              <option value="Low">Low</option>
+              <option value="Medium">Medium</option>
+              <option value="High">High</option>
+              <option value="Critical">Critical</option>
+            </select>
+
+            {/* Status Filter */}
+            <select
+              value={statusFilter}
+              onChange={(e) => setStatusFilter(e.target.value)}
+              className="bg-slate-950/70 border border-slate-800 rounded-xl px-3 py-2 text-xs text-slate-350 outline-none focus:border-violet-500"
+            >
+              <option value="">All Statuses</option>
+              {columns.map(c => (
+                <option key={c} value={c}>{c}</option>
+              ))}
+            </select>
+
+            {/* Assignee Filter */}
+            <select
+              value={assigneeFilter}
+              onChange={(e) => setAssigneeFilter(e.target.value)}
+              className="bg-slate-950/70 border border-slate-800 rounded-xl px-3 py-2 text-xs text-slate-350 outline-none focus:border-violet-500"
+            >
+              <option value="">All Assignees</option>
+              {teamMembers.map((m: any) => (
+                <option key={m._id} value={m._id}>{m.name}</option>
+              ))}
+            </select>
+          </div>
+
+        </div>
+      </div>
+
       {/* KANBAN BOARD */}
       {isKanban ? (
         <div className="grid grid-cols-1 md:grid-cols-5 gap-4 items-start">
           {columns.map((col) => {
-            const colTasks = getSortedTasks(tasks.filter(t => t.status === col));
+            const colTasks = getSortedTasks(filteredTasks.filter(t => t.status === col));
             return (
               <div key={col} className="bg-slate-900 border border-slate-800/80 rounded-2xl p-4 min-h-[500px] flex flex-col space-y-3">
                 <div className="flex justify-between items-center pb-2 border-b border-slate-800/60">
@@ -374,14 +476,33 @@ export default function Tasks() {
                             )}
                           </div>
 
-                          {/* Quick stop/start timer icons */}
-                          <button
-                            onClick={(e) => { e.stopPropagation(); handleStartTimer(t._id, t.title); }}
-                            className="p-1 rounded bg-slate-900 text-slate-500 hover:text-emerald-400 hover:bg-slate-800 transition-colors opacity-0 group-hover:opacity-100"
-                            title="Start Timer"
-                          >
-                            <Play size={10} fill="currentColor" />
-                          </button>
+                          {/* Quick action buttons */}
+                          <div className="flex items-center space-x-1.5 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+                            <button
+                              onClick={(e) => { e.stopPropagation(); handleStartTimer(t._id, t.title); }}
+                              className="p-1 rounded bg-slate-900 text-slate-500 hover:text-emerald-400 hover:bg-slate-800 transition-colors"
+                              title="Start Timer"
+                            >
+                              <Play size={10} fill="currentColor" />
+                            </button>
+                            <button
+                              onClick={async (e) => { 
+                                e.stopPropagation(); 
+                                if (window.confirm('Are you sure you want to delete this task?')) {
+                                  try {
+                                    await api.delete(`/tasks/${t._id}`);
+                                    fetchTasksProjectsAndTeam();
+                                  } catch (err) {
+                                    alert(err.response?.data?.message || 'Failed to delete task');
+                                  }
+                                }
+                              }}
+                              className="p-1 rounded bg-slate-905 text-slate-500 hover:text-red-400 hover:bg-slate-800 transition-colors"
+                              title="Delete Task"
+                            >
+                              <Trash2 size={10} />
+                            </button>
+                          </div>
                         </div>
 
                         <div className="flex items-center space-x-1.5">
@@ -426,7 +547,7 @@ export default function Tasks() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-850">
-                {getSortedTasks(tasks).map((t) => (
+                {getSortedTasks(filteredTasks).map((t) => (
                   <tr 
                     key={t._id}
                     onClick={() => handleOpenDetailModal(t)}
@@ -470,13 +591,32 @@ export default function Tasks() {
                       {t.dueDate ? new Date(t.dueDate).toLocaleDateString() : '-'}
                     </td>
                     <td className="p-4">
-                      <button
-                        onClick={(e) => { e.stopPropagation(); handleStartTimer(t._id, t.title); }}
-                        className="flex items-center space-x-1 px-2.5 py-1 bg-violet-600/15 hover:bg-violet-600/25 border border-violet-500/30 text-violet-400 hover:text-white rounded-lg transition-all"
-                      >
-                        <Play size={10} fill="currentColor" />
-                        <span>Track</span>
-                      </button>
+                      <div className="flex items-center space-x-2">
+                        <button
+                          onClick={(e) => { e.stopPropagation(); handleStartTimer(t._id, t.title); }}
+                          className="flex items-center space-x-1 px-2.5 py-1 bg-violet-600/15 hover:bg-violet-600/25 border border-violet-500/30 text-violet-400 hover:text-white rounded-lg transition-all"
+                        >
+                          <Play size={10} fill="currentColor" />
+                          <span>Track</span>
+                        </button>
+                        <button
+                          onClick={async (e) => { 
+                            e.stopPropagation(); 
+                            if (window.confirm('Are you sure you want to delete this task?')) {
+                              try {
+                                await api.delete(`/tasks/${t._id}`);
+                                fetchTasksProjectsAndTeam();
+                              } catch (err) {
+                                alert(err.response?.data?.message || 'Failed to delete task');
+                              }
+                            }
+                          }}
+                          className="p-1 rounded bg-slate-950 border border-slate-800 text-slate-400 hover:text-red-400 hover:border-red-900/40 transition-colors"
+                          title="Delete Task"
+                        >
+                          <Trash2 size={12} />
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 ))}
@@ -539,7 +679,7 @@ export default function Tasks() {
                   />
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                   <div>
                     <label className="block text-xs font-black text-slate-400 uppercase tracking-wider mb-2">Project Workspace</label>
                     <select 
@@ -563,6 +703,16 @@ export default function Tasks() {
                     </select>
                   </div>
                   
+                  <div>
+                    <label className="block text-xs font-black text-slate-400 uppercase tracking-wider mb-2">Start Date</label>
+                    <input 
+                      type="date" 
+                      value={startDate}
+                      onChange={(e) => setStartDate(e.target.value)}
+                      className="w-full bg-slate-950 border border-slate-850 rounded-xl px-4 py-2.5 text-xs text-slate-100 outline-none focus:border-violet-500 transition-colors"
+                    />
+                  </div>
+
                   <div>
                     <label className="block text-xs font-black text-slate-400 uppercase tracking-wider mb-2">Due Date</label>
                     <input 

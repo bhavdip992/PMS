@@ -24,7 +24,7 @@ class NotificationRepository {
   async markAsRead(id, recipientId) {
     return await Notification.findOneAndUpdate(
       { _id: id, recipient: recipientId },
-      { isRead: true },
+      { isRead: true, readAt: new Date() },
       { new: true }
     );
   }
@@ -32,8 +32,12 @@ class NotificationRepository {
   async markAllAsRead(recipientId) {
     return await Notification.updateMany(
       { recipient: recipientId, isRead: false },
-      { isRead: true }
+      { isRead: true, readAt: new Date() }
     );
+  }
+
+  async delete(id, recipientId) {
+    return await Notification.findOneAndDelete({ _id: id, recipient: recipientId });
   }
 }
 

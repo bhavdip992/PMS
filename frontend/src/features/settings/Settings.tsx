@@ -23,6 +23,48 @@ export default function Settings() {
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
 
+  // Tags state
+  const [tags, setTags] = useState<any[]>([]);
+  const [newTagName, setNewTagName] = useState('');
+  const [newTagColor, setNewTagColor] = useState('#8b5cf6');
+
+  useEffect(() => {
+    if (user?.role === 'Super Admin') {
+      fetchTags();
+    }
+  }, [user]);
+
+  const fetchTags = async () => {
+    try {
+      const res = await api.get('/tags');
+      setTags(res.data.data.tags || []);
+    } catch (err) {
+      console.error('Failed to fetch tags', err);
+    }
+  };
+
+  const handleAddTag = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newTagName.trim()) return;
+    try {
+      await api.post('/tags', { name: newTagName.trim(), color: newTagColor });
+      setNewTagName('');
+      fetchTags();
+    } catch (err: any) {
+      alert(err.response?.data?.message || 'Failed to add tag');
+    }
+  };
+
+  const handleDeleteTag = async (tagId: string) => {
+    if (!window.confirm('Are you sure you want to delete this tag?')) return;
+    try {
+      await api.delete(`/tags/${tagId}`);
+      fetchTags();
+    } catch (err: any) {
+      alert(err.response?.data?.message || 'Failed to delete tag');
+    }
+  };
+
   const handleAvatarChange = (e) => {
     const file = e.target.files[0];
     if (!file) return;
@@ -61,7 +103,7 @@ export default function Settings() {
 
       await api.put('/auth/me', payload);
       alert('Profile settings saved successfully!');
-      
+
       // Update state in app
       checkAuth();
       setPassword('');
@@ -88,7 +130,7 @@ export default function Settings() {
   ];
 
   return (
-    <div className="space-y-6 max-w-4xl">
+    <div className="space-y-6 max-w-8xl">
       <div>
         <h1 className="text-2xl font-black text-slate-100 flex items-center space-x-2">
           <SettingsIcon className="text-violet-400" />
@@ -97,39 +139,40 @@ export default function Settings() {
         <p className="text-xs text-slate-400 mt-1">Manage your user profile details, regional timezones, password, and notification alerts.</p>
       </div>
 
-      <form onSubmit={handleSaveProfile} className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        
-        {/* Left Column: Avatar & Role details */}
-        <div className="bg-slate-900 border border-slate-800/80 rounded-2xl p-5 flex flex-col items-center justify-center space-y-4">
+      {/* Top Banner Profile Banner Header */}
+      <div className="bg-gradient-to-r from-slate-900 via-slate-900 to-violet-950/30 border border-slate-800 p-6 rounded-2xl flex flex-col md:flex-row items-center justify-between gap-6 relative overflow-hidden">
+        <div className="absolute top-0 right-0 w-64 h-64 bg-violet-600/5 rounded-full filter blur-3xl pointer-events-none" />
+        <div className="flex flex-col md:flex-row items-center gap-5 text-center md:text-left z-10">
           <div className="relative group">
             {avatar ? (
-              <img src={avatar} alt="Avatar" className="w-24 h-24 rounded-full object-cover border-4 border-slate-800" />
+              <img src={avatar} alt="Avatar" className="w-20 h-20 rounded-full object-cover border-4 border-slate-800 shadow-xl" />
             ) : (
-              <div className="w-24 h-24 rounded-full bg-violet-650 text-3xl flex items-center justify-center font-bold text-white uppercase border-4 border-slate-800">
+              <div className="w-20 h-20 rounded-full bg-gradient-to-tr from-violet-600 to-indigo-600 text-3xl flex items-center justify-center font-bold text-white uppercase border-4 border-slate-800 shadow-xl">
                 {name ? name[0] : 'U'}
               </div>
             )}
-            
-            <label className="absolute bottom-0 right-0 p-1.5 bg-violet-600 rounded-full cursor-pointer hover:bg-violet-500 transition-colors shadow-lg">
-              <Camera size={14} className="text-white" />
+
+            <label className="absolute bottom-0 right-0 p-1.5 bg-violet-600 hover:bg-violet-500 rounded-full cursor-pointer transition-colors shadow-lg">
+              <Camera size={12} className="text-white" />
               <input type="file" accept="image/*" onChange={handleAvatarChange} className="hidden" />
             </label>
           </div>
 
-          <div className="text-center">
-            <h3 className="text-sm font-bold text-slate-200">{user?.name}</h3>
-            <span className="text-[10px] font-extrabold px-2 py-0.5 rounded-full bg-violet-600/10 text-violet-400 border border-violet-500/20 uppercase tracking-wider mt-1 inline-block">
-              {user?.role}
-            </span>
-          </div>
-
-          <div className="w-full border-t border-slate-850 pt-3 text-center text-[10px] text-slate-500">
-            <span>Joined: {user?.createdAt ? new Date(user.createdAt).toLocaleDateString() : '-'}</span>
+          <div>
+            <div className="flex flex-col sm:flex-row sm:items-center gap-2">
+              <h2 className="text-lg font-black text-slate-100">{user?.name}</h2>
+              <span className="bg-violet-950/80 text-violet-400 border border-violet-850 text-[9px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full inline-block w-fit">
+                {user?.role}
+              </span>
+            </div>
+            <p className="text-xs text-slate-400 mt-1">{user?.email}</p>
+            <p className="text-[10px] text-slate-500 mt-0.5">Member since {user?.createdAt ? new Date(user.createdAt).toLocaleDateString() : '-'}</p>
           </div>
         </div>
+      </div>
 
-        {/* Right Column: Information form fields */}
-        <div className="md:col-span-2 space-y-6">
+      <form onSubmit={handleSaveProfile} className="space-y-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           {/* Section 1: Core Details */}
           <div className="bg-slate-900 border border-slate-800/80 rounded-2xl p-6 space-y-4">
             <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider border-b border-slate-800 pb-2 flex items-center space-x-1.5">
@@ -137,11 +180,11 @@ export default function Settings() {
               <span>Personal Information</span>
             </h3>
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="space-y-3">
               <div>
                 <label className="block text-xs font-bold text-slate-450 uppercase tracking-wider mb-1.5">Full Name</label>
-                <input 
-                  type="text" 
+                <input
+                  type="text"
                   required
                   value={name}
                   onChange={(e) => setName(e.target.value)}
@@ -151,7 +194,7 @@ export default function Settings() {
 
               <div>
                 <label className="block text-xs font-bold text-slate-450 uppercase tracking-wider mb-1.5">Department</label>
-                <select 
+                <select
                   value={department}
                   onChange={(e) => setDepartment(e.target.value as any)}
                   className="w-full bg-slate-950 border border-slate-850 rounded-xl px-4 py-2 text-xs text-slate-100 outline-none focus:border-violet-500 transition-colors"
@@ -167,7 +210,7 @@ export default function Settings() {
 
               <div>
                 <label className="block text-xs font-bold text-slate-450 uppercase tracking-wider mb-1.5">System Timezone</label>
-                <select 
+                <select
                   value={timezone}
                   onChange={(e) => setTimezone(e.target.value)}
                   className="w-full bg-slate-950 border border-slate-850 rounded-xl px-4 py-2 text-xs text-slate-100 outline-none focus:border-violet-500 transition-colors"
@@ -175,17 +218,17 @@ export default function Settings() {
                   {timezones.map(tz => <option key={tz} value={tz}>{tz}</option>)}
                 </select>
               </div>
-            </div>
 
-            <div>
-              <label className="block text-xs font-bold text-slate-450 uppercase tracking-wider mb-1.5">Email Address</label>
-              <input 
-                type="email" 
-                disabled
-                value={user?.email}
-                className="w-full bg-slate-950 border border-slate-850 rounded-xl px-4 py-2 text-xs text-slate-500 outline-none cursor-not-allowed"
-                title="Email address cannot be changed"
-              />
+              <div>
+                <label className="block text-xs font-bold text-slate-450 uppercase tracking-wider mb-1.5">Email Address</label>
+                <input
+                  type="email"
+                  disabled
+                  value={user?.email}
+                  className="w-full bg-slate-950 border border-slate-850 rounded-xl px-4 py-2 text-xs text-slate-500 outline-none cursor-not-allowed"
+                  title="Email address cannot be changed"
+                />
+              </div>
             </div>
           </div>
 
@@ -196,10 +239,10 @@ export default function Settings() {
               <span>Notification Preferences</span>
             </h3>
 
-            <div className="space-y-3">
+            <div className="space-y-4">
               <label className="flex items-center space-x-3 cursor-pointer">
-                <input 
-                  type="checkbox" 
+                <input
+                  type="checkbox"
                   checked={inApp}
                   onChange={(e) => setInApp(e.target.checked)}
                   className="rounded border-slate-850 bg-slate-950 text-violet-600 focus:ring-0 focus:ring-offset-0 w-4 h-4"
@@ -211,8 +254,8 @@ export default function Settings() {
               </label>
 
               <label className="flex items-center space-x-3 cursor-pointer">
-                <input 
-                  type="checkbox" 
+                <input
+                  type="checkbox"
                   checked={emailNotification}
                   onChange={(e) => setEmailNotification(e.target.checked)}
                   className="rounded border-slate-850 bg-slate-950 text-violet-600 focus:ring-0 focus:ring-offset-0 w-4 h-4"
@@ -224,8 +267,8 @@ export default function Settings() {
               </label>
 
               <label className="flex items-center space-x-3 cursor-pointer">
-                <input 
-                  type="checkbox" 
+                <input
+                  type="checkbox"
                   checked={popups}
                   onChange={(e) => setPopups(e.target.checked)}
                   className="rounded border-slate-850 bg-slate-950 text-violet-600 focus:ring-0 focus:ring-offset-0 w-4 h-4"
@@ -238,7 +281,7 @@ export default function Settings() {
             </div>
           </div>
 
-          {/* Section 2.5: Theme Appearance */}
+          {/* Section 3: Appearance & Theme */}
           <div className="bg-slate-900 border border-slate-800/80 rounded-2xl p-6 space-y-4">
             <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider border-b border-slate-800 pb-2 flex items-center space-x-1.5">
               <Monitor size={12} className="text-violet-400" />
@@ -247,42 +290,41 @@ export default function Settings() {
             <p className="text-[11px] text-slate-500">Choose how esparkPM looks for you. Your preference is saved locally on this device.</p>
             <div className="grid grid-cols-3 gap-2">
               {[
-                { val: 'light',  Icon: Sun,     label: 'Light Mode',  desc: 'Bright workspace' },
-                { val: 'dark',   Icon: Moon,    label: 'Dark Mode',   desc: 'Easy on eyes' },
-                { val: 'system', Icon: Monitor, label: 'System',      desc: 'Follows OS setting' },
+                { val: 'light', Icon: Sun, label: 'Light', desc: 'Bright workspace' },
+                { val: 'dark', Icon: Moon, label: 'Dark', desc: 'Easy on eyes' },
+                { val: 'system', Icon: Monitor, label: 'System', desc: 'Follows OS' },
               ].map(({ val, Icon, label, desc }) => (
                 <button
                   key={val}
                   type="button"
                   onClick={() => setTheme(val)}
-                  className={`flex flex-col items-center gap-2 p-4 rounded-xl border-2 transition-all ${
-                    theme === val
-                      ? 'border-violet-500 bg-violet-950/30 text-violet-300'
-                      : 'border-slate-800 bg-slate-950/40 text-slate-400 hover:border-slate-600 hover:text-slate-200'
-                  }`}
+                  className={`flex flex-col items-center gap-2 p-3 rounded-xl border-2 transition-all ${theme === val
+                    ? 'border-violet-500 bg-violet-950/30 text-violet-300'
+                    : 'border-slate-800 bg-slate-950/40 text-slate-400 hover:border-slate-600 hover:text-slate-200'
+                    }`}
                 >
-                  <Icon size={20} />
+                  <Icon size={16} />
                   <div className="text-center">
-                    <p className="text-xs font-bold">{label}</p>
-                    <p className="text-[9px] mt-0.5 opacity-70">{desc}</p>
+                    <p className="text-[10px] font-bold">{label}</p>
+                    <p className="text-[8px] mt-0.5 opacity-70">{desc}</p>
                   </div>
                 </button>
               ))}
             </div>
           </div>
 
-          {/* Section 3: Credentials / Password */}
+          {/* Section 4: Change Security Password */}
           <div className="bg-slate-900 border border-slate-800/80 rounded-2xl p-6 space-y-4">
             <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider border-b border-slate-800 pb-2 flex items-center space-x-1.5">
               <Shield size={12} className="text-violet-400" />
               <span>Change Security Password</span>
             </h3>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="space-y-3">
               <div>
                 <label className="block text-xs font-bold text-slate-450 uppercase tracking-wider mb-1.5">New Password</label>
-                <input 
-                  type="password" 
+                <input
+                  type="password"
                   value={password}
                   placeholder="Min. 6 characters"
                   onChange={(e) => setPassword(e.target.value)}
@@ -292,8 +334,8 @@ export default function Settings() {
 
               <div>
                 <label className="block text-xs font-bold text-slate-450 uppercase tracking-wider mb-1.5">Confirm Password</label>
-                <input 
-                  type="password" 
+                <input
+                  type="password"
                   value={confirmPassword}
                   placeholder="Repeat new password"
                   onChange={(e) => setConfirmPassword(e.target.value)}
@@ -303,14 +345,77 @@ export default function Settings() {
             </div>
           </div>
 
-          {/* Section 4: Connected Devices & Sessions */}
-          <div className="bg-slate-900 border border-slate-800/80 rounded-2xl p-6 space-y-4">
+          {/* Section 5: Predefined Tags (Super Admin only) */}
+          {user?.role === 'Super Admin' && (
+            <div className="bg-slate-900 border border-slate-800/80 rounded-2xl p-6 space-y-4 md:col-span-2 animate-fadeIn">
+              <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider border-b border-slate-800 pb-2 flex items-center space-x-1.5">
+                <SettingsIcon size={12} className="text-violet-400" />
+                <span>Predefined Workspace Tags</span>
+              </h3>
+              <p className="text-[11px] text-slate-500">Create global tags that team members can assign to projects and tasks.</p>
+
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  value={newTagName}
+                  onChange={(e) => setNewTagName(e.target.value)}
+                  placeholder="Tag name (e.g. Frontend, API, Bug)"
+                  className="flex-1 bg-slate-950 border border-slate-850 rounded-xl px-4 py-2 text-xs text-slate-100 outline-none focus:border-violet-500 transition-colors"
+                />
+                <input
+                  type="color"
+                  value={newTagColor}
+                  onChange={(e) => setNewTagColor(e.target.value)}
+                  className="w-10 h-8 bg-transparent border-0 rounded cursor-pointer self-center"
+                  title="Choose tag color"
+                />
+                <button
+                  type="button"
+                  onClick={handleAddTag}
+                  className="px-4 py-2 bg-violet-600 hover:bg-violet-500 text-white font-bold text-xs rounded-xl shadow-lg transition-all"
+                >
+                  Add Tag
+                </button>
+              </div>
+
+              <div className="flex flex-wrap gap-2 pt-2">
+                {tags.length === 0 ? (
+                  <p className="text-xs text-slate-500 italic">No predefined tags created yet.</p>
+                ) : (
+                  tags.map((tag) => (
+                    <span
+                      key={tag._id}
+                      className="flex items-center space-x-1.5 px-3 py-1 rounded-full text-xs font-bold border"
+                      style={{
+                        backgroundColor: `${tag.color}15`,
+                        borderColor: `${tag.color}35`,
+                        color: tag.color
+                      }}
+                    >
+                      <span>{tag.name}</span>
+                      <button
+                        type="button"
+                        onClick={() => handleDeleteTag(tag._id)}
+                        className="hover:text-red-550 font-black transition-colors ml-1 cursor-pointer"
+                        title="Delete tag"
+                      >
+                        &times;
+                      </button>
+                    </span>
+                  ))
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* Section 6: Connected Devices & Sessions */}
+          <div className="bg-slate-900 border border-slate-800/80 rounded-2xl p-6 space-y-4 md:col-span-2">
             <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider border-b border-slate-800 pb-2 flex items-center space-x-1.5">
               <Shield size={12} className="text-violet-400" />
               <span>Connected Devices & Sessions</span>
             </h3>
             <p className="text-[11px] text-slate-500">Manage active login sessions on other devices and browsers.</p>
-            
+
             <div className="space-y-3">
               {activeSessions && activeSessions.length > 0 ? (
                 activeSessions.map((session: any) => (
@@ -343,15 +448,15 @@ export default function Settings() {
               </button>
             )}
           </div>
-
-          {/* Submit Action */}
-          <button
-            type="submit"
-            className="w-full py-2.5 bg-violet-600 hover:bg-violet-500 text-white text-xs font-bold rounded-xl shadow-lg transition-all"
-          >
-            Save All Profile Settings
-          </button>
         </div>
+
+        {/* Submit Action */}
+        <button
+          type="submit"
+          className="w-full py-3 bg-violet-600 hover:bg-violet-500 text-white text-xs font-black uppercase tracking-wider rounded-xl shadow-lg transition-all"
+        >
+          Save All Profile Settings
+        </button>
       </form>
     </div>
   );

@@ -26,7 +26,7 @@ export const getProject = async (req, res, next) => {
 
 export const updateProject = async (req, res, next) => {
   try {
-    const project = await projectService.updateProject(req.params.id, req.body);
+    const project = await projectService.updateProject(req.params.id, req.body, req.user?._id?.toString());
     res.status(200).json({
       status: 'success',
       data: { project }

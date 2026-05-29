@@ -12,6 +12,12 @@ class ActivityLogRepository {
       .sort({ createdAt: -1 });
   }
 
+  async findBySubtaskId(subtaskId) {
+    return await ActivityLog.find({ subtask: subtaskId })
+      .populate('user', 'name role avatar')
+      .sort({ createdAt: -1 });
+  }
+
   async findByProjectId(projectId, limit = 50) {
     return await ActivityLog.find({ project: projectId })
       .populate('user', 'name role avatar')

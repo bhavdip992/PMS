@@ -45,7 +45,7 @@ graph TD
     A[Vite Frontend React App] -->|Axios REST| B[Express TypeScript Backend]
     A -->|Socket.io WebSockets| B
     B -->|Mongoose ORM| C[MongoDB Database]
-    B -->|Google Generative AI SDK| D[Google Gemini 1.5 Flash]
+    B -->|Google Generative AI SDK| D[Google Gemini 2.5 Flash]
 ```
 
 ### 1. Backend Design System
@@ -83,7 +83,7 @@ graph TD
    MONGODB_URI=your_mongodb_connection_uri
    JWT_SECRET=your_jwt_signing_key
    GEMINI_API_KEY=your_google_gemini_api_key
-   GEMINI_MODEL=gemini-1.5-flash
+   GEMINI_MODEL=gemini-2.5-flash
    ```
 4. Seed the database with the Super Admin user:
    ```bash

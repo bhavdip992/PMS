@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import api from '../../services/api.tsx';
 import Modal from '../../components/Modal.tsx';
 import { 
@@ -14,6 +15,7 @@ import {
 import ProjectOverviewDrawer from './ProjectOverviewDrawer.tsx';
 
 export default function Projects() {
+  const navigate = useNavigate();
   const [projects, setProjects] = useState([]);
   const [teamMembers, setTeamMembers] = useState([]);
   const [modalOpen, setModalOpen] = useState(false);
@@ -33,10 +35,24 @@ export default function Projects() {
   const [priority, setPriority] = useState('Medium');
   const [status, setStatus] = useState('In Progress');
   const [assignees, setAssignees] = useState([]);
+  const [startDate, setStartDate] = useState('');
+  const [endDate, setEndDate] = useState('');
+  const [tags, setTags] = useState<string[]>([]);
+  const [availableTags, setAvailableTags] = useState<any[]>([]);
 
   useEffect(() => {
     fetchProjectsAndTeam();
+    fetchAvailableTags();
   }, []);
+
+  const fetchAvailableTags = async () => {
+    try {
+      const res = await api.get('/tags');
+      setAvailableTags(res.data.data.tags || []);
+    } catch (err) {
+      console.error('Failed to load available tags', err);
+    }
+  };
 
   const fetchProjectsAndTeam = async () => {
     setLoading(true);
@@ -69,7 +85,10 @@ export default function Projects() {
         budgetHours: Number(budgetHours) || 0,
         priority,
         status,
-        assignees
+        assignees,
+        startDate: startDate || undefined,
+        endDate: endDate || undefined,
+        tags
       };
 
       await api.post('/projects', payload);
@@ -85,6 +104,9 @@ export default function Projects() {
       setPriority('Medium');
       setStatus('In Progress');
       setAssignees([]);
+      setStartDate('');
+      setEndDate('');
+      setTags([]);
 
       fetchProjectsAndTeam();
     } catch (err) {
@@ -139,7 +161,7 @@ export default function Projects() {
           projects.map((p) => (
             <div 
               key={p._id} 
-              onClick={() => { setSelectedProjectId(p._id); setOverviewOpen(true); }}
+              onClick={() => navigate(`/projects/${p._id}`)}
               className="cursor-pointer bg-slate-900 border border-slate-800 rounded-2xl p-5 flex flex-col justify-between space-y-4 hover:border-violet-500/50 hover:shadow-lg hover:shadow-violet-950/15 transition-all duration-200"
             >
               <div>
@@ -256,6 +278,27 @@ export default function Projects() {
             </div>
           </div>
 
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-1.5">Start Date</label>
+              <input 
+                type="date" 
+                value={startDate}
+                onChange={(e) => setStartDate(e.target.value)}
+                className="w-full bg-slate-950 border border-slate-850 rounded-xl px-4 py-2 text-xs text-slate-100 outline-none focus:border-violet-500 transition-colors"
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-1.5">End Date (Due Date)</label>
+              <input 
+                type="date" 
+                value={endDate}
+                onChange={(e) => setEndDate(e.target.value)}
+                className="w-full bg-slate-950 border border-slate-850 rounded-xl px-4 py-2 text-xs text-slate-100 outline-none focus:border-violet-500 transition-colors"
+              />
+            </div>
+          </div>
+
           <div className="border-t border-slate-800 pt-3">
             <h4 className="text-xs font-bold text-violet-400 uppercase tracking-wider mb-2">Client Parameters</h4>
             <div className="grid grid-cols-3 gap-3">
@@ -303,6 +346,40 @@ export default function Projects() {
                     {member.name}
                   </button>
                 ))
+              )}
+            </div>
+          </div>
+
+          <div className="border-t border-slate-800 pt-3">
+            <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-1.5">Project Tags</label>
+            <div className="flex flex-wrap gap-2 max-h-24 overflow-y-auto">
+              {availableTags.length === 0 ? (
+                <p className="text-[10px] text-slate-500">No workspace tags created. Define them in Profile Settings.</p>
+              ) : (
+                availableTags.map(tag => {
+                  const isSelected = tags.includes(tag.name);
+                  return (
+                    <button
+                      type="button"
+                      key={tag._id}
+                      onClick={() => {
+                        setTags(prev => 
+                          prev.includes(tag.name) 
+                            ? prev.filter(t => t !== tag.name) 
+                            : [...prev, tag.name]
+                        );
+                      }}
+                      className="px-2.5 py-1 rounded-full text-[10px] font-bold border transition-colors flex items-center space-x-1"
+                      style={{
+                        backgroundColor: isSelected ? `${tag.color}25` : 'transparent',
+                        borderColor: isSelected ? tag.color : '#334155',
+                        color: isSelected ? tag.color : '#64748b'
+                      }}
+                    >
+                      <span>{tag.name}</span>
+                    </button>
+                  );
+                })
               )}
             </div>
           </div>

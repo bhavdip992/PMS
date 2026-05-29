@@ -5,27 +5,32 @@ import { useNotificationStore } from '../store/useNotificationStore.tsx';
 import { useTimeLogStore } from '../store/useTimeLogStore.tsx';
 import { useThemeStore } from '../store/useThemeStore.tsx';
 import api from '../services/api.tsx';
+import { motion, AnimatePresence } from 'framer-motion';
+import { requestNotificationPermission } from '../services/desktopNotification';
 import {
-  LayoutDashboard, FolderKanban, CheckSquare, Mail, Key, Users,
+  LayoutDashboard, FolderKanban, CheckSquare, Mail, Key, Users, Layers,
   LogOut, Bell, Search, Clock, Menu, X, Square, Shield, Sparkles,
   Calendar, Settings, Activity, Sun, Moon, Monitor, UserCircle,
-  Inbox, ClipboardList, ChevronDown, ExternalLink,
+  Inbox, ClipboardList, ChevronDown, ExternalLink, AtSign, UserPlus,
+  MessageSquare, ShieldAlert, FileUp, Zap
 } from 'lucide-react';
 
 const navItems = (role: string) => [
-  { path: '/',            label: 'Dashboard',         icon: LayoutDashboard },
-  { path: '/my-tasks',   label: 'My Tasks',           icon: ClipboardList },
-  { path: '/projects',   label: 'Projects',           icon: FolderKanban },
-  { path: '/tasks',      label: 'Tasks & Boards',     icon: CheckSquare },
-  { path: '/inbox',      label: 'Inbox',              icon: Inbox },
-  { path: '/calendar',   label: 'Personal Calendar',  icon: Calendar },
+  { path: '/', label: 'Dashboard', icon: LayoutDashboard },
+  { path: '/my-tasks', label: 'My Tasks', icon: ClipboardList },
+  { path: '/projects', label: 'Projects', icon: FolderKanban },
+  { path: '/tasks', label: 'Tasks & Boards', icon: CheckSquare },
+  { path: '/subtasks', label: 'Sub-Tasks Matrix', icon: Layers },
+  { path: '/timesheet', label: 'Timesheet Matrix', icon: Clock },
+  { path: '/inbox', label: 'Inbox', icon: Inbox },
+  { path: '/calendar', label: 'Personal Calendar', icon: Calendar },
   ...(['Super Admin', 'Admin', 'Project Manager'].includes(role)
     ? [{ path: '/workload', label: 'Team Workload', icon: Activity }]
     : []),
   { path: '/communications', label: 'Communications', icon: Mail },
-  { path: '/vault',      label: 'Credential Vault',   icon: Key },
-  { path: '/team',       label: 'Team Members',       icon: Users },
-  { path: '/settings',   label: 'Settings',           icon: Settings },
+  { path: '/vault', label: 'Credential Vault', icon: Key },
+  { path: '/team', label: 'Team Members', icon: Users },
+  { path: '/settings', label: 'Settings', icon: Settings },
   ...(role === 'Super Admin'
     ? [{ path: '/admin/users', label: 'User Management', icon: Shield }]
     : []),
@@ -40,27 +45,38 @@ export default function DashboardLayout() {
   const location = useLocation();
 
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const [searchOpen, setSearchOpen]         = useState(false);
-  const [searchQuery, setSearchQuery]       = useState('');
-  const [searchResults, setSearchResults]   = useState<any>(null);
-  const [askingAI, setAskingAI]             = useState(false);
-  const [aiAnswer, setAiAnswer]             = useState<any>(null);
-  const [aiAlerts, setAiAlerts]             = useState<any[]>([]);
-  const [notifOpen, setNotifOpen]           = useState(false);
+  const [searchOpen, setSearchOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [searchResults, setSearchResults] = useState<any>(null);
+  const [askingAI, setAskingAI] = useState(false);
+  const [aiAnswer, setAiAnswer] = useState<any>(null);
+  const [aiAlerts, setAiAlerts] = useState<any[]>([]);
+  const [notifOpen, setNotifOpen] = useState(false);
 
-  const [userMenuOpen, setUserMenuOpen]     = useState(false);
+  const [userMenuOpen, setUserMenuOpen] = useState(false);
   const [secondsElapsed, setSecondsElapsed] = useState(0);
-  const [toast, setToast]                   = useState<any>(null);
+  const [toasts, setToasts] = useState<any[]>([]);
 
-  const notifRef   = useRef<HTMLDivElement>(null);
+  const notifRef = useRef<HTMLDivElement>(null);
   const userMenuRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    if (activeToast) { setToast(activeToast); setActiveToast(null); const t = setTimeout(() => setToast(null), 5000); return () => clearTimeout(t); }
+    if (activeToast) {
+      const id = activeToast._id || Math.random().toString(36).substring(2, 9);
+      setToasts(prev => [...prev, { ...activeToast, toastId: id }]);
+      setActiveToast(null);
+      setTimeout(() => {
+        setToasts(prev => prev.filter(t => t.toastId !== id));
+      }, 5000);
+    }
   }, [activeToast, setActiveToast]);
 
   useEffect(() => {
-    if (user) { initSocket(user._id); fetchActiveTimer(); fetchNotifications(); }
+    if (user) {
+      initSocket(user._id);
+      fetchActiveTimer();
+      fetchNotifications();
+    }
     return () => disconnectSocket();
   }, [user]);
 
@@ -126,7 +142,7 @@ export default function DashboardLayout() {
     if (res.success) alert(`Timer logged: ${res.data.duration} minute(s)`);
   };
 
-  const fmt = (s: number) => `${String(Math.floor(s/3600)).padStart(2,'0')}:${String(Math.floor(s%3600/60)).padStart(2,'0')}:${String(s%60).padStart(2,'0')}`;
+  const fmt = (s: number) => `${String(Math.floor(s / 3600)).padStart(2, '0')}:${String(Math.floor(s % 3600 / 60)).padStart(2, '0')}:${String(s % 60).padStart(2, '0')}`;
   const isActive = (path: string) => path === '/' ? location.pathname === '/' : location.pathname.startsWith(path);
 
   const items = navItems(user?.role || '');
@@ -177,7 +193,7 @@ export default function DashboardLayout() {
                     <button onClick={markAllAsRead} className="text-[10px] text-[hsl(var(--espark-primary))] hover:underline font-semibold">Mark all read</button>
                   </div>
                 </div>
-                 <div className="max-h-72 overflow-y-auto divide-y divide-[hsl(var(--espark-border)/0.4)]">
+                <div className="max-h-72 overflow-y-auto divide-y divide-[hsl(var(--espark-border)/0.4)]">
                   {aiAlerts.length > 0 && (
                     <div className="bg-violet-950/20 p-3 border-b border-[hsl(var(--espark-border)/0.8)] space-y-2">
                       <div className="flex items-center justify-between">
@@ -275,9 +291,6 @@ export default function DashboardLayout() {
               </button>
             ))}
           </nav>
-          <div className="bg-[hsl(var(--espark-bg))] p-3 rounded-xl border border-[hsl(var(--espark-border))] text-[11px] text-[hsl(var(--espark-muted))] text-center font-medium">
-            esparkPM v2.0 · Enterprise
-          </div>
         </aside>
 
         {/* SIDEBAR (mobile) */}
@@ -328,90 +341,167 @@ export default function DashboardLayout() {
                 ? <p className="text-center py-8 text-[hsl(var(--espark-muted))]">Type to search the workspace…</p>
                 : searchResults
                   ? <>
-                      {/* AI Search Assistant Action */}
-                      <div className="bg-gradient-to-r from-violet-950/20 to-indigo-950/20 border border-violet-900/30 p-3.5 rounded-xl space-y-2 mb-3">
-                        <div className="flex justify-between items-center">
-                          <span className="text-[10px] font-black text-violet-400 uppercase tracking-wider flex items-center gap-1">
-                            <Sparkles size={11} />
-                            <span>AI Search Assistant</span>
-                          </span>
-                          {!askingAI && !aiAnswer && (
-                            <button
-                              onClick={handleAISearch}
-                              className="px-2.5 py-1 bg-violet-600 hover:bg-violet-500 text-white font-bold text-[9px] rounded-lg transition-colors"
-                            >
-                              Ask Gemini
-                            </button>
-                          )}
-                        </div>
-                        
-                        {askingAI && (
-                          <div className="flex items-center space-x-2 py-2">
-                            <div className="w-3.5 h-3.5 border-2 border-violet-500/20 border-t-violet-400 rounded-full animate-spin" />
-                            <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Gemini is searching tasks & discussions...</span>
-                          </div>
-                        )}
-
-                        {aiAnswer && (
-                          <div className="space-y-2 mt-1.5 animate-fadeIn">
-                            <div className="text-[11px] text-slate-300 leading-relaxed bg-slate-950/45 p-3 rounded-lg border border-slate-900 font-medium">
-                              {aiAnswer.directAnswer}
-                            </div>
-                            {aiAnswer.suggestedFollowUpQueries && aiAnswer.suggestedFollowUpQueries.length > 0 && (
-                              <div className="flex flex-wrap gap-1.5 pt-1">
-                                {aiAnswer.suggestedFollowUpQueries.map((q: string, i: number) => (
-                                  <button
-                                    key={i}
-                                    onClick={() => setSearchQuery(q)}
-                                    className="text-[9px] bg-slate-950/70 hover:bg-slate-900 border border-slate-850 px-2 py-0.5 rounded-full text-slate-400 hover:text-slate-200 transition-colors"
-                                  >
-                                    {q}
-                                  </button>
-                                ))}
-                              </div>
-                            )}
-                          </div>
+                    {/* AI Search Assistant Action */}
+                    <div className="bg-gradient-to-r from-violet-950/20 to-indigo-950/20 border border-violet-900/30 p-3.5 rounded-xl space-y-2 mb-3">
+                      <div className="flex justify-between items-center">
+                        <span className="text-[10px] font-black text-violet-400 uppercase tracking-wider flex items-center gap-1">
+                          <Sparkles size={11} />
+                          <span>AI Search Assistant</span>
+                        </span>
+                        {!askingAI && !aiAnswer && (
+                          <button
+                            onClick={handleAISearch}
+                            className="px-2.5 py-1 bg-violet-600 hover:bg-violet-500 text-white font-bold text-[9px] rounded-lg transition-colors"
+                          >
+                            Ask Gemini
+                          </button>
                         )}
                       </div>
 
-                      {searchResults.projects?.length > 0 && <section>
-                        <h5 className="text-[10px] font-bold text-[hsl(var(--espark-primary))] uppercase tracking-wider mb-1">Projects</h5>
-                        {searchResults.projects.map((p: any) => (
-                          <div key={p._id} onClick={() => { navigate('/projects'); setSearchOpen(false); }} className="p-2.5 rounded-lg bg-[hsl(var(--espark-surface-2))] hover:bg-[hsl(var(--espark-border))] cursor-pointer mb-1">
-                            <p className="font-bold text-[hsl(var(--espark-text))]">{p.name}</p>
-                            <p className="text-[hsl(var(--espark-muted))] truncate">{p.description}</p>
+                      {askingAI && (
+                        <div className="flex items-center space-x-2 py-2">
+                          <div className="w-3.5 h-3.5 border-2 border-violet-500/20 border-t-violet-400 rounded-full animate-spin" />
+                          <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Gemini is searching tasks & discussions...</span>
+                        </div>
+                      )}
+
+                      {aiAnswer && (
+                        <div className="space-y-2 mt-1.5 animate-fadeIn">
+                          <div className="text-[11px] text-slate-300 leading-relaxed bg-slate-950/45 p-3 rounded-lg border border-slate-900 font-medium">
+                            {aiAnswer.directAnswer}
                           </div>
-                        ))}
-                      </section>}
-                      {searchResults.tasks?.length > 0 && <section>
-                        <h5 className="text-[10px] font-bold text-[hsl(var(--espark-primary))] uppercase tracking-wider mb-1">Tasks</h5>
-                        {searchResults.tasks.map((t: any) => (
-                          <div key={t._id} onClick={() => { navigate(`/tasks/${t._id}`); setSearchOpen(false); }} className="p-2.5 rounded-lg bg-[hsl(var(--espark-surface-2))] hover:bg-[hsl(var(--espark-border))] cursor-pointer mb-1">
-                            <p className="font-bold text-[hsl(var(--espark-text))]">{t.title}</p>
-                          </div>
-                        ))}
-                      </section>}
-                    </>
+                          {aiAnswer.suggestedFollowUpQueries && aiAnswer.suggestedFollowUpQueries.length > 0 && (
+                            <div className="flex flex-wrap gap-1.5 pt-1">
+                              {aiAnswer.suggestedFollowUpQueries.map((q: string, i: number) => (
+                                <button
+                                  key={i}
+                                  onClick={() => setSearchQuery(q)}
+                                  className="text-[9px] bg-slate-950/70 hover:bg-slate-900 border border-slate-850 px-2 py-0.5 rounded-full text-slate-400 hover:text-slate-200 transition-colors"
+                                >
+                                  {q}
+                                </button>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      )}
+                    </div>
+
+                    {searchResults.projects?.length > 0 && <section>
+                      <h5 className="text-[10px] font-bold text-[hsl(var(--espark-primary))] uppercase tracking-wider mb-1">Projects</h5>
+                      {searchResults.projects.map((p: any) => (
+                        <div key={p._id} onClick={() => { navigate('/projects'); setSearchOpen(false); }} className="p-2.5 rounded-lg bg-[hsl(var(--espark-surface-2))] hover:bg-[hsl(var(--espark-border))] cursor-pointer mb-1">
+                          <p className="font-bold text-[hsl(var(--espark-text))]">{p.name}</p>
+                          <p className="text-[hsl(var(--espark-muted))] truncate">{p.description}</p>
+                        </div>
+                      ))}
+                    </section>}
+                    {searchResults.tasks?.length > 0 && <section>
+                      <h5 className="text-[10px] font-bold text-[hsl(var(--espark-primary))] uppercase tracking-wider mb-1">Tasks</h5>
+                      {searchResults.tasks.map((t: any) => (
+                        <div key={t._id} onClick={() => { navigate(`/tasks/${t._id}`); setSearchOpen(false); }} className="p-2.5 rounded-lg bg-[hsl(var(--espark-surface-2))] hover:bg-[hsl(var(--espark-border))] cursor-pointer mb-1">
+                          <p className="font-bold text-[hsl(var(--espark-text))]">{t.title}</p>
+                        </div>
+                      ))}
+                    </section>}
+                  </>
                   : <div className="flex justify-center py-8"><div className="w-6 h-6 border-2 border-[hsl(var(--espark-primary)/0.2)] border-t-[hsl(var(--espark-primary))] rounded-full animate-spin" /></div>}
             </div>
           </div>
         </div>
       )}
 
-      {/* TOAST */}
-      {toast && (
-        <div className="fixed bottom-4 right-4 z-50 max-w-sm w-full bg-[hsl(var(--espark-surface))] border-2 border-[hsl(var(--espark-primary)/0.8)] rounded-2xl shadow-2xl p-4 flex gap-3 items-start animate-slideLeft">
-          <div className="w-8 h-8 rounded-full bg-[hsl(var(--espark-primary)/0.15)] flex items-center justify-center text-[hsl(var(--espark-primary))] flex-shrink-0">
-            <Bell size={16} className="animate-bounce" />
-          </div>
-          <div className="flex-1 min-w-0">
-            <p className="text-xs font-black text-[hsl(var(--espark-text))] uppercase tracking-wide">{toast.title || 'Notification'}</p>
-            <p className="text-[11px] text-[hsl(var(--espark-muted))] mt-1 leading-relaxed">{toast.message}</p>
-            {toast.link && <button onClick={() => { navigate(toast.link); setToast(null); }} className="text-[10px] text-[hsl(var(--espark-primary))] hover:underline font-bold mt-2">View details →</button>}
-          </div>
-          <button onClick={() => setToast(null)} className="p-1 rounded-lg text-[hsl(var(--espark-muted))] hover:text-[hsl(var(--espark-text))] transition-colors"><X size={14} /></button>
-        </div>
-      )}
+      {/* TOAST STACK */}
+      <div className="fixed bottom-6 right-6 z-[9999] flex flex-col gap-3 max-w-sm w-full pointer-events-none">
+        <AnimatePresence>
+          {toasts.map((t) => {
+            let IconComponent = Bell;
+            let iconColor = 'text-[hsl(var(--espark-primary))]';
+            let iconBg = 'bg-[hsl(var(--espark-primary)/0.15)]';
+            let borderColor = 'border-[hsl(var(--espark-primary)/0.4)]';
+
+            if (t.type === 'Task_Assign' || t.type === 'task:assigned') {
+              IconComponent = UserPlus;
+              iconColor = 'text-blue-400';
+              iconBg = 'bg-blue-950/30';
+              borderColor = 'border-blue-500/30';
+            } else if (t.type === 'Comm_Update' || t.type === 'task:commented' || t.type === 'communication:updated') {
+              IconComponent = MessageSquare;
+              iconColor = 'text-emerald-400';
+              iconBg = 'bg-emerald-950/30';
+              borderColor = 'border-emerald-500/30';
+            } else if (t.type === 'task:overdue') {
+              IconComponent = ShieldAlert;
+              iconColor = 'text-red-400';
+              iconBg = 'bg-red-950/30';
+              borderColor = 'border-red-500/30';
+            } else if (t.type === 'file:uploaded') {
+              IconComponent = FileUp;
+              iconColor = 'text-teal-400';
+              iconBg = 'bg-teal-950/30';
+              borderColor = 'border-teal-500/30';
+            } else if (t.type === 'System') {
+              IconComponent = Zap;
+              iconColor = 'text-amber-400';
+              iconBg = 'bg-amber-950/30';
+              borderColor = 'border-amber-500/30';
+            }
+
+            return (
+              <motion.div
+                key={t.toastId}
+                initial={{ opacity: 0, y: 50, scale: 0.9 }}
+                animate={{ opacity: 1, y: 0, scale: 1 }}
+                exit={{ opacity: 0, scale: 0.85, transition: { duration: 0.2 } }}
+                className={`pointer-events-auto w-full bg-[hsl(var(--espark-surface))]/90 backdrop-blur-xl border ${borderColor} rounded-2xl shadow-[0_20px_50px_rgba(0,0,0,0.3)] p-4 flex gap-3.5 items-start relative group transition-all duration-300 hover:-translate-y-0.5`}
+              >
+                {/* Decorative background glow */}
+                <div className="absolute inset-0 rounded-2xl bg-gradient-to-br from-white/5 to-transparent pointer-events-none" />
+                
+                {/* Icon Container */}
+                <div className={`w-9 h-9 rounded-xl ${iconBg} flex items-center justify-center ${iconColor} flex-shrink-0 shadow-inner`}>
+                  <IconComponent size={18} className="animate-pulse" />
+                </div>
+
+                {/* Content */}
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center justify-between">
+                    <span className={`text-[9px] font-black uppercase tracking-wider ${iconColor}`}>
+                      {t.type?.replace('task:', '').replace('_', ' ') || 'Update'}
+                    </span>
+                    <button
+                      onClick={() => setToasts(prev => prev.filter(item => item.toastId !== t.toastId))}
+                      className="text-[hsl(var(--espark-muted))] hover:text-[hsl(var(--espark-text))] transition-colors p-0.5 rounded-lg hover:bg-white/5"
+                    >
+                      <X size={12} />
+                    </button>
+                  </div>
+                  <h4 className="text-xs font-extrabold text-[hsl(var(--espark-text))] mt-1 leading-snug">
+                    {t.title || 'esparkPM Update'}
+                  </h4>
+                  <p className="text-[11px] text-[hsl(var(--espark-muted))] mt-0.5 leading-relaxed">
+                    {t.message}
+                  </p>
+                  
+                  {/* Action Link */}
+                  {(t.link || t.actionUrl) && (
+                    <button
+                      onClick={() => {
+                        const path = t.link || t.actionUrl;
+                        navigate(path.startsWith('/') ? path : '/' + path);
+                        setToasts(prev => prev.filter(item => item.toastId !== t.toastId));
+                      }}
+                      className="text-[10px] text-[hsl(var(--espark-primary))] hover:underline font-extrabold mt-2 block"
+                    >
+                      View details →
+                    </button>
+                  )}
+                </div>
+              </motion.div>
+            );
+          })}
+        </AnimatePresence>
+      </div>
     </div>
   );
 }

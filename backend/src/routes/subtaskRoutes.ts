@@ -7,8 +7,10 @@ import {
   listSubtasks,
   toggleSubtask,
   getSubtaskComments,
-  createSubtaskComment
+  createSubtaskComment,
+  listAllSubtasks
 } from '../controllers/subtaskController.js';
+import { getSubtaskActivities } from '../controllers/activityLogController.js';
 import { protect } from '../middlewares/authMiddleware.js';
 
 const router = express.Router();
@@ -16,6 +18,7 @@ const router = express.Router();
 router.use(protect);
 
 router.route('/')
+  .get(listAllSubtasks)
   .post(createSubtask);
 
 router.route('/task/:taskId')
@@ -25,6 +28,7 @@ router.route('/task/:taskId')
 router.route('/:id')
   .get(getSubtask)
   .put(updateSubtask)
+  .patch(updateSubtask)
   .delete(deleteSubtask);
 
 router.route('/:id/toggle')
@@ -33,5 +37,8 @@ router.route('/:id/toggle')
 router.route('/:id/comments')
   .get(getSubtaskComments)
   .post(createSubtaskComment);
+
+router.route('/:id/activities')
+  .get(getSubtaskActivities);
 
 export default router;

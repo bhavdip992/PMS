@@ -9,6 +9,8 @@ import { mongoSanitize } from './middlewares/mongoSanitize.js';
 import { AppError } from './utils/appError.js';
 import apiRouter from './routes/index.js';
 
+import path from 'path';
+
 const app = express();
 
 // CORS configuration (Must be at the top to handle preflight OPTIONS requests)
@@ -41,6 +43,7 @@ app.use(express.json({ limit: '10kb' }));
 app.use(express.urlencoded({ extended: true, limit: '10kb' }));
 app.use(mongoSanitize);
 app.use(cookieParser());
+app.use('/uploads', express.static(path.join(process.cwd(), 'uploads')));
 
 // Test route (Health check)
 app.get('/health', (req, res) => {

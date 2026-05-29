@@ -17,6 +17,7 @@ export interface IUser extends mongoose.Document {
   isActive: boolean;
   notificationPreferences: { inApp: boolean; email: boolean; popups: boolean };
   lastLogin?: Date;
+  lastSeenAt?: Date;
   comparePassword(candidate: string, hash: string): Promise<boolean>;
   createdAt: Date;
   updatedAt: Date;
@@ -158,7 +159,11 @@ export interface ISubtask extends mongoose.Document {
 
 // ─── Notification ─────────────────────────────────────────────────────────────
 
-export type NotificationType = 'task_assigned' | 'task_updated' | 'task_commented' | 'task_due_soon' | 'task_overdue' | 'mention' | 'file_uploaded' | 'sprint_updated' | 'status_changed' | 'communication_update';
+export type NotificationType = 
+  | 'Task_Assign' | 'Mention' | 'Due_Reminder' | 'Comm_Update' | 'System'
+  | 'task:assigned' | 'task:updated' | 'task:commented' | 'task:overdue'
+  | 'task:status_changed' | 'file:uploaded' | 'sprint:updated' | 'mention:created'
+  | 'communication:updated';
 
 export interface INotification extends mongoose.Document {
   _id: mongoose.Types.ObjectId;
@@ -169,7 +174,13 @@ export interface INotification extends mongoose.Document {
   message: string;
   isRead: boolean;
   link?: string;
+  actionUrl?: string;
+  groupKey?: string;
+  channel: ('inApp' | 'email' | 'push')[];
+  readAt?: Date;
+  metadata?: Record<string, any>;
   createdAt: Date;
+  updatedAt: Date;
 }
 
 // ─── Time Log ─────────────────────────────────────────────────────────────────
@@ -193,10 +204,37 @@ export interface ITeam extends mongoose.Document {
   _id: mongoose.Types.ObjectId;
   name: string;
   description?: string;
-  lead: mongoose.Types.ObjectId;
+  leader: mongoose.Types.ObjectId;
   members: mongoose.Types.ObjectId[];
   projects: mongoose.Types.ObjectId[];
+  department?: mongoose.Types.ObjectId;
+  capacity?: number;
+  performanceScore?: number;
+  workloadPercentage?: number;
   createdAt: Date;
+  updatedAt: Date;
+}
+
+// ─── Department ────────────────────────────────────────────────────────────────
+
+export interface IDepartment extends mongoose.Document {
+  _id: mongoose.Types.ObjectId;
+  name: string;
+  slug: string;
+  head: mongoose.Types.ObjectId;
+  members: mongoose.Types.ObjectId[];
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+// ─── Tag ───────────────────────────────────────────────────────────────────────
+
+export interface ITag extends mongoose.Document {
+  _id: mongoose.Types.ObjectId;
+  name: string;
+  color?: string;
+  createdAt: Date;
+  updatedAt: Date;
 }
 
 // ─── Activity Log ─────────────────────────────────────────────────────────────

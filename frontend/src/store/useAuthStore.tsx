@@ -35,8 +35,14 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
   loading: true,
   activeSessions: [],
 
-  setCredentials: (accessToken, user) => set({ accessToken, user, isAuthenticated: !!user, loading: false }),
-  clearCredentials: () => set({ accessToken: null, user: null, isAuthenticated: false, loading: false, activeSessions: [] }),
+  setCredentials: (accessToken, user) => {
+    localStorage.setItem('espark_access_token', accessToken);
+    set({ accessToken, user, isAuthenticated: !!user, loading: false });
+  },
+  clearCredentials: () => {
+    localStorage.removeItem('espark_access_token');
+    set({ accessToken: null, user: null, isAuthenticated: false, loading: false, activeSessions: [] });
+  },
 
   login: async (email, password, rememberMe = false) => {
     set({ loading: true });

@@ -1,13 +1,18 @@
 import timeLogRepository from '../repositories/timeLogRepository.js';
 import taskRepository from '../repositories/taskRepository.js';
+import subtaskRepository from '../repositories/subtaskRepository.js';
 import { AppError } from '../utils/appError.js';
 
 class TimeLogService {
   async startTimer(userId, taskId, description, isBillable = true) {
-    // Validate task exists
-    const task = await taskRepository.findById(taskId);
+    // Validate task or subtask exists
+    let task = await taskRepository.findById(taskId);
+    let subtask = null;
     if (!task) {
-      throw new AppError('Task not found', 404);
+      subtask = await subtaskRepository.findById(taskId);
+      if (!subtask) {
+        throw new AppError('Task or Subtask not found', 404);
+      }
     }
 
     // Check if there is already an active timer for this user
@@ -17,14 +22,20 @@ class TimeLogService {
       await this.stopTimer(userId);
     }
 
-    const newLog = await timeLogRepository.create({
-      task: taskId,
+    const logData: any = {
       user: userId,
       startTime: new Date(),
       description,
       isBillable
-    });
+    };
 
+    if (task) {
+      logData.task = taskId;
+    } else {
+      logData.subtask = taskId;
+    }
+
+    const newLog = await timeLogRepository.create(logData);
     return newLog;
   }
 
@@ -42,9 +53,11 @@ class TimeLogService {
       duration
     });
 
-    // Update actualHours in the Task document
+    // Update actualHours in the Task/Subtask document
     if (activeTimer.task) {
       await this.recalculateTaskActualHours(activeTimer.task._id);
+    } else if (activeTimer.subtask) {
+      await this.recalculateSubtaskActualHours(activeTimer.subtask._id);
     }
 
     return updatedLog;
@@ -57,9 +70,13 @@ class TimeLogService {
   async logTimeManual(userId, manualData) {
     const { taskId, startTime, endTime, description, isBillable = true } = manualData;
 
-    const task = await taskRepository.findById(taskId);
+    let task = await taskRepository.findById(taskId);
+    let subtask = null;
     if (!task) {
-      throw new AppError('Task not found', 404);
+      subtask = await subtaskRepository.findById(taskId);
+      if (!subtask) {
+        throw new AppError('Task or Subtask not found', 404);
+      }
     }
 
     const start = new Date(startTime);
@@ -71,18 +88,29 @@ class TimeLogService {
 
     const duration = Math.max(1, Math.round((new Date(end as any).getTime() - new Date(start as any).getTime()) / 60000)); // in minutes
 
-    const log = await timeLogRepository.create({
-      task: taskId,
+    const logData: any = {
       user: userId,
       startTime: start,
       endTime: end,
       duration,
       description,
       isBillable
-    });
+    };
 
-    // Update actualHours in the Task document
-    await this.recalculateTaskActualHours(taskId);
+    if (task) {
+      logData.task = taskId;
+    } else {
+      logData.subtask = taskId;
+    }
+
+    const log = await timeLogRepository.create(logData);
+
+    // Update actualHours in the Task/Subtask document
+    if (task) {
+      await this.recalculateTaskActualHours(taskId);
+    } else {
+      await this.recalculateSubtaskActualHours(taskId);
+    }
 
     return log;
   }
@@ -90,11 +118,37 @@ class TimeLogService {
   async recalculateTaskActualHours(taskId) {
     try {
       const { items } = await timeLogRepository.findAll({ task: taskId });
-      const totalMinutes = items.reduce((sum, log) => sum + (log.duration || 0), 0);
-      const actualHours = parseFloat((totalMinutes / 60).toFixed(2));
+      const directMinutes = items.reduce((sum, log) => sum + (log.duration || 0), 0);
+
+      // Also get all subtasks for this task and aggregate their time logs
+      const subtasks = await subtaskRepository.findAllByParentTask(taskId);
+      let subtasksMinutes = 0;
+      for (const sub of subtasks) {
+        const { items: sublogs } = await timeLogRepository.findAll({ subtask: sub._id });
+        subtasksMinutes += sublogs.reduce((sum, log) => sum + (log.duration || 0), 0);
+      }
+
+      const actualHours = parseFloat(((directMinutes + subtasksMinutes) / 60).toFixed(2));
       await taskRepository.update(taskId, { actualHours });
     } catch (err) {
       console.error(`Error recalculating actual hours for task ${taskId}: ${err.message}`);
+    }
+  }
+
+  async recalculateSubtaskActualHours(subtaskId) {
+    try {
+      const { items } = await timeLogRepository.findAll({ subtask: subtaskId });
+      const totalMinutes = items.reduce((sum, log) => sum + (log.duration || 0), 0);
+      const actualHours = parseFloat((totalMinutes / 60).toFixed(2));
+      await subtaskRepository.update(subtaskId, { actualHours });
+
+      // Also trigger updating parent task actual hours if subtask is linked
+      const subtask = await subtaskRepository.findById(subtaskId);
+      if (subtask && subtask.parentTask) {
+        await this.recalculateTaskActualHours(subtask.parentTask._id || subtask.parentTask);
+      }
+    } catch (err) {
+      console.error(`Error recalculating actual hours for subtask ${subtaskId}: ${err.message}`);
     }
   }
 
@@ -109,14 +163,32 @@ class TimeLogService {
     }
 
     if (query.task) {
-      filter.task = query.task;
+      filter.$or = [
+        { task: query.task },
+        { subtask: query.task }
+      ];
+    }
+
+    if (query.subtask) {
+      filter.subtask = query.subtask;
     }
 
     if (query.project) {
       // Find tasks belonging to this project first
       const { items } = await taskRepository.findAll({ project: query.project });
       const taskIds = items.map(t => t._id);
-      filter.task = { $in: taskIds };
+      
+      // Find subtasks belonging to these tasks
+      const subtaskIds: any[] = [];
+      for (const tId of taskIds) {
+        const subs = await subtaskRepository.findAllByParentTask(tId);
+        subtaskIds.push(...subs.map(s => s._id));
+      }
+
+      filter.$or = [
+        { task: { $in: taskIds } },
+        { subtask: { $in: subtaskIds } }
+      ];
     }
 
     const options = {
@@ -126,6 +198,29 @@ class TimeLogService {
     };
 
     return await timeLogRepository.findAll(filter, options);
+  }
+
+  async deleteTimeLog(id, userId) {
+    const log = await timeLogRepository.findById(id);
+    if (!log) {
+      throw new AppError('Time log not found', 404);
+    }
+
+    // Verify ownership or admin role (can bypass role check for simple task owner verification)
+    // Note: log.user is populated/raw objectId
+    const logUserId = log.user._id || log.user;
+    if (logUserId.toString() !== userId.toString()) {
+      throw new AppError('Not authorized to delete this time log', 403);
+    }
+
+    await timeLogRepository.delete(id);
+
+    // Recalculate actual hours
+    if (log.task) {
+      await this.recalculateTaskActualHours(log.task._id || log.task);
+    } else if (log.subtask) {
+      await this.recalculateSubtaskActualHours(log.subtask._id || log.subtask);
+    }
   }
 }
 

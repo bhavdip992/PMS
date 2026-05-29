@@ -12,6 +12,11 @@ const activityLogSchema = new mongoose.Schema({
     ref: 'Task',
     index: true
   },
+  subtask: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Subtask',
+    index: true
+  },
   user: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'User',

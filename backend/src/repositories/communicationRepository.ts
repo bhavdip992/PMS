@@ -10,6 +10,7 @@ class CommunicationRepository {
     return await Communication.findById(id)
       .populate('project', 'name')
       .populate('task', 'title')
+      .populate('subtask', 'title')
       .populate('participants', 'name email role avatar')
       .populate('createdBy', 'name email role');
   }
@@ -23,6 +24,8 @@ class CommunicationRepository {
       .skip(skip)
       .limit(Number(limit))
       .populate('project', 'name')
+      .populate('task', 'title')
+      .populate('subtask', 'title')
       .populate('participants', 'name email role avatar')
       .populate('createdBy', 'name email role');
 

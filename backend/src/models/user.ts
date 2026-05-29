@@ -29,6 +29,7 @@ const userSchema = new Schema<IUser>({
     popups: { type: Boolean, default: true }
   },
   lastLogin: { type: Date },
+  lastSeenAt: { type: Date },
   
   // Phase 1 additions
   refreshTokens: [{ type: String }],

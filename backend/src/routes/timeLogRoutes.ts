@@ -4,7 +4,8 @@ import {
   stopTimer, 
   getActiveTimer, 
   logTimeManual, 
-  listTimeLogs 
+  listTimeLogs,
+  deleteTimeLog
 } from '../controllers/timeLogController.js';
 import { protect } from '../middlewares/authMiddleware.js';
 
@@ -24,5 +25,8 @@ router.route('/stop')
 
 router.route('/active')
   .get(getActiveTimer);
+
+router.route('/:id')
+  .delete(deleteTimeLog);
 
 export default router;

@@ -7,19 +7,32 @@ class TimeLogRepository {
   }
 
   async findById(id) {
-    return await TimeLog.findById(id).populate('task', 'title');
+    return await TimeLog.findById(id)
+      .populate('user', 'name email role avatar')
+      .populate('task', 'title')
+      .populate('subtask', 'title');
   }
 
   async findActiveTimer(userId) {
     // Active timer has startTime but no endTime
-    return await TimeLog.findOne({ user: userId, endTime: { $exists: false } }).populate('task', 'title');
+    return await TimeLog.findOne({ user: userId, endTime: { $exists: false } })
+      .populate('user', 'name email role avatar')
+      .populate('task', 'title')
+      .populate('subtask', 'title');
   }
 
   async update(id, updateData) {
     return await TimeLog.findByIdAndUpdate(id, updateData, {
       new: true,
       runValidators: true
-    }).populate('task', 'title');
+    })
+      .populate('user', 'name email role avatar')
+      .populate('task', 'title')
+      .populate('subtask', 'title');
+  }
+
+  async delete(id) {
+    return await TimeLog.findByIdAndDelete(id);
   }
 
   async findAll(filter: Record<string, any> = {}, options: QueryOptions = {}) {
@@ -30,7 +43,16 @@ class TimeLogRepository {
       .sort(sort)
       .skip(skip)
       .limit(Number(limit))
-      .populate('task', 'title project');
+      .populate('user', 'name email role avatar')
+      .populate('task', 'title project')
+      .populate({
+        path: 'subtask',
+        select: 'title parentTask',
+        populate: {
+          path: 'parentTask',
+          select: 'title project'
+        }
+      });
 
     const total = await TimeLog.countDocuments(filter);
 

@@ -15,6 +15,9 @@ import meetingRoutes from './meetingRoutes.js';
 import milestoneRoutes from './milestoneRoutes.js';
 import attachmentRoutes from './attachmentRoutes.js';
 import auditLogRoutes from './auditLogRoutes.js';
+import dashboardRoutes from './dashboardRoutes.js';
+import departmentRoutes from './departmentRoutes.js';
+import tagRoutes from './tagRoutes.js';
 
 const router: Router = express.Router();
 
@@ -27,6 +30,7 @@ router.use('/communications', communicationRoutes);
 router.use('/credentials', credentialRoutes);
 router.use('/notifications', notificationRoutes);
 router.use('/timelogs', timeLogRoutes);
+router.use('/time-logs', timeLogRoutes);
 router.use('/ai', aiRoutes);
 router.use('/search', searchRoutes);
 router.use('/users', userRoutes);
@@ -34,5 +38,8 @@ router.use('/meetings', meetingRoutes);
 router.use('/milestones', milestoneRoutes);
 router.use('/attachments', attachmentRoutes);
 router.use('/audit-logs', auditLogRoutes);
+router.use('/dashboard', dashboardRoutes);
+router.use('/departments', departmentRoutes);
+router.use('/tags', tagRoutes);
 
 export default router;

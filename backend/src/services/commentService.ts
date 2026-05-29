@@ -18,12 +18,18 @@ class CommentService {
     const authorUser = await userRepository.findById(userId);
     const isClient = authorUser?.role === 'Client';
 
-    // Auto-detect mentions in comment content (e.g. "@username" or "@Name")
+    // Auto-detect mentions in comment content (e.g. "@username" or "@Name" or "@all")
     const parsedMentions = [];
     try {
       const activeUsers = await User.find({ isActive: true });
       const text = (commentData.content || '').toLowerCase();
+      const hasAllMention = text.includes('@all');
+      
       for (const u of activeUsers) {
+        if (hasAllMention) {
+          parsedMentions.push(u._id.toString());
+          continue;
+        }
         const fullName = u.name.toLowerCase();
         const firstName = u.name.split(' ')[0].toLowerCase();
         const emailPrefix = u.email.split('@')[0].toLowerCase();
@@ -135,6 +141,17 @@ class CommentService {
       });
     }
 
+    // Add Super Admins for full visibility
+    try {
+      const superAdmins = await User.find({ role: 'Super Admin', isActive: true }).select('_id').lean();
+      superAdmins.forEach((sa: any) => {
+        const saId = sa._id.toString();
+        if (saId !== userId.toString()) recipientsToNotify.add(saId);
+      });
+    } catch (err: any) {
+      console.error('Failed to fetch Super Admins for comment notification:', err.message);
+    }
+
     for (const recipientId of recipientsToNotify) {
       try {
         await notificationService.createNotification({
@@ -145,7 +162,7 @@ class CommentService {
           message: `New comment on task: "${task.title}"`,
           link: `/tasks/${taskId}`
         });
-      } catch (err) {
+      } catch (err: any) {
         console.error(`Failed to send comment notification to user ${recipientId}: ${err.message}`);
       }
     }
@@ -163,12 +180,18 @@ class CommentService {
       throw new AppError('Subtask not found', 404);
     }
 
-    // Auto-detect mentions in comment content
+    // Auto-detect mentions in comment content (e.g. "@username" or "@Name" or "@all")
     const parsedMentions = [];
     try {
       const activeUsers = await User.find({ isActive: true });
       const text = (commentData.content || '').toLowerCase();
+      const hasAllMention = text.includes('@all');
+      
       for (const u of activeUsers) {
+        if (hasAllMention) {
+          parsedMentions.push(u._id.toString());
+          continue;
+        }
         const fullName = u.name.toLowerCase();
         const firstName = u.name.split(' ')[0].toLowerCase();
         const emailPrefix = u.email.split('@')[0].toLowerCase();
@@ -260,6 +283,17 @@ class CommentService {
       recipientsToNotify.delete(mentionId.toString());
     });
 
+    // Add Super Admins for full visibility
+    try {
+      const superAdmins = await User.find({ role: 'Super Admin', isActive: true }).select('_id').lean();
+      superAdmins.forEach((sa: any) => {
+        const saId = sa._id.toString();
+        if (saId !== userId.toString()) recipientsToNotify.add(saId);
+      });
+    } catch (err: any) {
+      console.error('Failed to fetch Super Admins for subtask comment notification:', err.message);
+    }
+
     for (const recipientId of recipientsToNotify) {
       try {
         await notificationService.createNotification({
@@ -270,7 +304,7 @@ class CommentService {
           message: `New comment on subtask: "${subtask.title}"`,
           link: `/tasks/${parentTaskId}`
         });
-      } catch (err) {
+      } catch (err: any) {
         console.error(`Failed to send subtask comment notification to ${recipientId}: ${err.message}`);
       }
     }

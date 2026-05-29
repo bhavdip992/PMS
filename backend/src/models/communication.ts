@@ -11,6 +11,11 @@ const communicationSchema = new mongoose.Schema({
     ref: 'Task',
     index: true
   },
+  subtask: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Subtask',
+    index: true
+  },
   type: {
     type: String,
     enum: {

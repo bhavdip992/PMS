@@ -7,7 +7,9 @@ import {
   listTasks,
   addChecklistItem,
   toggleChecklistItem,
-  removeChecklistItem
+  removeChecklistItem,
+  getTaskDependencies,
+  addTaskDependency
 } from '../controllers/taskController.js';
 import { 
   createComment, 
@@ -15,6 +17,8 @@ import {
   deleteComment 
 } from '../controllers/commentController.js';
 import { getTaskActivities } from '../controllers/activityLogController.js';
+import { getTaskTimeLogs } from '../controllers/timeLogController.js';
+import { createSubtask, listSubtasks } from '../controllers/subtaskController.js';
 import { protect } from '../middlewares/authMiddleware.js';
 
 const router = express.Router();
@@ -48,5 +52,22 @@ router.route('/comments/:commentId')
 // Task activities integration
 router.route('/:id/activities')
   .get(getTaskActivities);
+
+router.route('/:id/activity')
+  .get(getTaskActivities);
+
+// Task subtasks integration
+router.route('/:taskId/subtasks')
+  .get(listSubtasks)
+  .post(createSubtask);
+
+// Task dependencies integration
+router.route('/:id/dependencies')
+  .get(getTaskDependencies)
+  .post(addTaskDependency);
+
+// Task time logs integration
+router.route('/:id/time-logs')
+  .get(getTaskTimeLogs);
 
 export default router;

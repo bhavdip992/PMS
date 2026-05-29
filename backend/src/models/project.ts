@@ -68,6 +68,19 @@ const projectSchema = new mongoose.Schema({
     endDate: { type: Date },
     isActive: { type: Boolean, default: false }
   }],
+  milestones: [{
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Milestone'
+  }],
+  velocity: {
+    type: Number,
+    default: 0
+  },
+  views: {
+    type: [String],
+    enum: ['kanban', 'list', 'timeline', 'calendar'],
+    default: ['kanban', 'list', 'timeline', 'calendar']
+  },
   tags: [{
     type: String,
     trim: true

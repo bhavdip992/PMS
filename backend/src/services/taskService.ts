@@ -3,6 +3,7 @@ import projectRepository from '../repositories/projectRepository.js';
 import notificationService from './notificationService.js';
 import activityLogRepository from '../repositories/activityLogRepository.js';
 import { AppError } from '../utils/appError.js';
+import User from '../models/user.js';
 
 class TaskService {
   async createTask(taskData, userId) {
@@ -13,7 +14,7 @@ class TaskService {
     const newTask = await taskRepository.create(data);
     await this.recalculateProjectProgress(newTask.project);
 
-    // Trigger assignment notifications
+    // Trigger assignment notifications to assignees
     if (newTask.assignees && newTask.assignees.length > 0) {
       for (const assigneeId of newTask.assignees) {
         try {
@@ -25,10 +26,30 @@ class TaskService {
             message: `You have been assigned to task: "${newTask.title}"`,
             link: `/tasks/${newTask._id}`
           });
-        } catch (err) {
+        } catch (err: any) {
           console.error(`Failed to send assignment notification to user ${assigneeId}: ${err.message}`);
         }
       }
+    }
+
+    // Notify all Super Admins about new task creation
+    try {
+      const superAdmins = await User.find({ role: 'Super Admin', isActive: true }).select('_id').lean();
+      for (const sa of superAdmins as any[]) {
+        const saId = sa._id.toString();
+        if (saId !== userId.toString()) {
+          await notificationService.createNotification({
+            recipient: saId,
+            sender: userId,
+            type: 'Task_Assign',
+            title: `New Task Created: ${newTask.title}`,
+            message: `A new task has been created in your workspace.`,
+            link: `/tasks/${newTask._id}`
+          }).catch(() => {});
+        }
+      }
+    } catch (err: any) {
+      console.error('Failed to notify Super Admins on task create:', err.message);
     }
 
     return newTask;
@@ -141,32 +162,43 @@ class TaskService {
 
     // Trigger notification if status or other fields changed
     if (changedFields.length > 0) {
-      const notifyRecipients = new Set();
-      if (task.watchers) task.watchers.forEach(w => notifyRecipients.add(w._id.toString()));
+      const notifyRecipients = new Set<string>();
+
+      // Always notify assignees, watchers, and creator
+      if (task.watchers) task.watchers.forEach((w: any) => notifyRecipients.add(w._id.toString()));
       if (task.createdBy && task.createdBy._id.toString() !== userId.toString()) {
         notifyRecipients.add(task.createdBy._id.toString());
       }
       if (task.assignees) {
-        task.assignees.forEach(a => {
+        task.assignees.forEach((a: any) => {
           const aId = a._id ? a._id.toString() : a.toString();
-          if (aId !== userId.toString()) {
-            notifyRecipients.add(aId);
-          }
+          if (aId !== userId.toString()) notifyRecipients.add(aId);
         });
       }
-      
+
+      // Always notify all Super Admins for full visibility
+      try {
+        const superAdmins = await User.find({ role: 'Super Admin', isActive: true }).select('_id').lean();
+        superAdmins.forEach((sa: any) => {
+          const saId = sa._id.toString();
+          if (saId !== userId.toString()) notifyRecipients.add(saId);
+        });
+      } catch (err: any) {
+        console.error('Failed to fetch Super Admins for notification:', err.message);
+      }
+
       const changeMsg = `Updated ${changedFields.join(', ')}`;
       for (const recId of notifyRecipients) {
         try {
           await notificationService.createNotification({
             recipient: recId,
             sender: userId,
-            type: 'System',
-            title: `Task Updated`,
-            message: `Task "${task.title}": ${changeMsg}`,
+            type: 'Task_Update',
+            title: `Task Updated: ${task.title}`,
+            message: changeMsg,
             link: `/tasks/${id}`
           });
-        } catch (err) {
+        } catch (err: any) {
           console.error(`Failed to send status update notification: ${err.message}`);
         }
       }
@@ -184,9 +216,11 @@ class TaskService {
     if (!task) {
       throw new AppError('Task not found', 404);
     }
-    const projectId = task.project._id;
+    const projectId = task.project?._id || task.project;
     await taskRepository.delete(id);
-    await this.recalculateProjectProgress(projectId);
+    if (projectId) {
+      await this.recalculateProjectProgress(projectId);
+    }
     return { message: 'Task successfully deleted' };
   }
 
@@ -288,6 +322,39 @@ class TaskService {
     const task = await this.getTask(taskId);
     (task as any).checklist = (task as any).checklist.filter(item => item._id.toString() !== itemId);
     return await taskRepository.update(taskId, { checklist: (task as any).checklist });
+  }
+
+  async getTaskDependencies(taskId) {
+    const task = await taskRepository.findById(taskId);
+    if (!task) {
+      throw new AppError('Task not found', 404);
+    }
+    return task.dependencies || [];
+  }
+
+  async addTaskDependency(taskId, dependencyId) {
+    const task = await taskRepository.findById(taskId);
+    if (!task) {
+      throw new AppError('Task not found', 404);
+    }
+    const depTask = await taskRepository.findById(dependencyId);
+    if (!depTask) {
+      throw new AppError('Dependency task not found', 404);
+    }
+
+    if (taskId.toString() === dependencyId.toString()) {
+      throw new AppError('A task cannot depend on itself', 400);
+    }
+
+    const currentDeps = (task.dependencies || []).map(d => (d._id || d).toString());
+    if (currentDeps.includes(dependencyId.toString())) {
+      return task;
+    }
+
+    const updatedTask = await taskRepository.update(taskId, {
+      $push: { dependencies: dependencyId }
+    });
+    return updatedTask;
   }
 }
 

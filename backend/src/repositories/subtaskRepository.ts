@@ -24,6 +24,19 @@ class SubtaskRepository {
   async findAllByParentTask(parentTaskId) {
     return await Subtask.find({ parentTask: parentTaskId }).populate('assignee', 'name email role avatar');
   }
+
+  async findAll(filter: Record<string, any> = {}) {
+    return await Subtask.find(filter)
+      .populate('assignee', 'name email role avatar')
+      .populate({
+        path: 'parentTask',
+        select: 'title status project',
+        populate: {
+          path: 'project',
+          select: 'name'
+        }
+      });
+  }
 }
 
 export default new SubtaskRepository();

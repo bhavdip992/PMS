@@ -31,7 +31,7 @@ export const getSubtask = async (req, res, next) => {
 
 export const updateSubtask = async (req, res, next) => {
   try {
-    const subtask = await subtaskService.updateSubtask(req.params.id, req.body);
+    const subtask = await subtaskService.updateSubtask(req.params.id, req.body, req.user?._id?.toString());
     res.status(200).json({
       status: 'success',
       data: { subtask }
@@ -97,6 +97,24 @@ export const getSubtaskComments = async (req, res, next) => {
       status: 'success',
       results: comments.length,
       data: { comments }
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const listAllSubtasks = async (req, res, next) => {
+  try {
+    const filter: any = {};
+    if (req.query.assignee) filter.assignee = req.query.assignee;
+    if (req.query.parentTask) filter.parentTask = req.query.parentTask;
+    if (req.query.status) filter.status = req.query.status;
+    
+    const subtasks = await subtaskService.listAllSubtasks(filter);
+    res.status(200).json({
+      status: 'success',
+      results: subtasks.length,
+      data: { subtasks }
     });
   } catch (error) {
     next(error);

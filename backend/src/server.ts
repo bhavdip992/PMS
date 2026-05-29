@@ -33,21 +33,6 @@ initSocket(io);
 // Store io in app settings to make it accessible in controllers/services
 app.set('io', io);
 
-// Basic Socket connection setup
-io.on('connection', (socket) => {
-  console.log(`Socket connected: ${socket.id}`);
-
-  // Authenticate socket using token if passed
-  socket.on('authenticate', (userId) => {
-    socket.join(userId);
-    console.log(`Socket ${socket.id} joined room for user: ${userId}`);
-  });
-
-  socket.on('disconnect', () => {
-    console.log(`Socket disconnected: ${socket.id}`);
-  });
-});
-
 const activeServer = server.listen(port, () => {
   console.log(`App running on port ${port} in ${process.env.NODE_ENV} mode...`);
 });
